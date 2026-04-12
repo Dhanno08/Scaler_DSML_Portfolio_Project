@@ -58,19 +58,8 @@ Scalable prediction pipeline
 Real-time forecasting capability
 📊 Model Comparison Flow
 
-flowchart LR
-    A[Train Data] --> B[Linear Regression]
-    A --> C[Random Forest]
-    A --> D[Gradient Boosting]
-    A --> E[ARIMA/Prophet]
+<img width="2091" height="720" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/5ddfa691-09c2-47d1-a917-77f7802afb3b" />
 
-    B --> F[Evaluation Metrics]
-    C --> F
-    D --> F
-    E --> F
-
-    F --> G{Best Model?}
-    G -->|Yes| H[Deploy Model]
 
 📈 Results & Insights
 
