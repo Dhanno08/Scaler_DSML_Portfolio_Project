@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Forecast API — Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <span class="header-icon">📦</span>
+        <div>
+          <h1 class="header-title">Sales Forecast API</h1>
+          <p class="header-sub">LightGBM · Retail Store Prediction Engine</p>
+        </div>
+      </div>
+      <div class="health-badge" id="healthBadge">
+        <span class="health-dot"></span> Checking...
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- ── Model metrics ────────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Model Performance</h2>
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">MAE (validation)</div>
+          <div class="kpi-value">₹{{ "{:,.0f}".format(metrics.MAE) }}</div>
+          <div class="kpi-sub">Mean absolute error</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">RMSE (validation)</div>
+          <div class="kpi-value">₹{{ "{:,.0f}".format(metrics.RMSE) }}</div>
+          <div class="kpi-sub">Root mean squared error</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">MAPE (validation)</div>
+          <div class="kpi-value">{{ metrics.MAPE }}%</div>
+          <div class="kpi-sub">Mean abs % error</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">R² (validation)</div>
+          <div class="kpi-value">{{ metrics.R2 }}</div>
+          <div class="kpi-sub">Coefficient of determination</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Training rows</div>
+          <div class="kpi-value">{{ "{:,}".format(metrics.train_rows) }}</div>
+          <div class="kpi-sub">Jan 2018 – May 2019</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Features</div>
+          <div class="kpi-value">{{ metrics.n_features }}</div>
+          <div class="kpi-sub">Lag, time, categorical</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Predict form ──────────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Single Prediction  <span class="endpoint-tag">POST /predict</span></h2>
+
+      <div class="card-row">
+        <!-- Form -->
+        <div class="form-card">
+          <form id="predictForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Store ID</label>
+                <input type="number" id="store_id" name="Store_id"
+                       value="1" min="1" max="365" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" id="date" name="Date"
+                       value="2019-06-15" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Store Type</label>
+                <select id="store_type" name="Store_Type" class="form-select">
+                  <option value="S1">S1</option>
+                  <option value="S2">S2</option>
+                  <option value="S3">S3</option>
+                  <option value="S4" selected>S4</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Location Type</label>
+                <select id="location_type" name="Location_Type" class="form-select">
+                  <option value="L1" selected>L1</option>
+                  <option value="L2">L2</option>
+                  <option value="L3">L3</option>
+                  <option value="L4">L4</option>
+                  <option value="L5">L5</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Region</label>
+                <select id="region_code" name="Region_Code" class="form-select">
+                  <option value="R1" selected>R1</option>
+                  <option value="R2">R2</option>
+                  <option value="R3">R3</option>
+                  <option value="R4">R4</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Discount</label>
+                <select id="discount" name="Discount" class="form-select">
+                  <option value="Yes" selected>Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Holiday</label>
+                <select id="holiday" name="Holiday" class="form-select">
+                  <option value="0" selected>No (0)</option>
+                  <option value="1">Yes (1)</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="predictBtn">
+              Predict Sales
+            </button>
+          </form>
+        </div>
+
+        <!-- Result panel -->
+        <div class="result-card" id="resultCard">
+          <div class="result-placeholder" id="resultPlaceholder">
+            <span class="result-icon">🔮</span>
+            <p>Fill in the form and click<br><strong>Predict Sales</strong></p>
+          </div>
+          <div class="result-content hidden" id="resultContent">
+            <div class="result-label">Predicted Sales</div>
+            <div class="result-value" id="resultValue">—</div>
+            <div class="result-meta" id="resultMeta"></div>
+            <div class="result-time" id="resultTime"></div>
+          </div>
+          <div class="result-error hidden" id="resultError"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Request / Response JSON viewer ───────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Request / Response</h2>
+      <div class="code-row">
+        <div class="code-block">
+          <div class="code-label">Request JSON</div>
+          <pre id="requestJson" class="code-pre">{}</pre>
+        </div>
+        <div class="code-block">
+          <div class="code-label">Response JSON</div>
+          <pre id="responseJson" class="code-pre">{}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Batch prediction ──────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Batch Prediction  <span class="endpoint-tag">POST /predict/batch</span></h2>
+      <p class="section-desc">Upload a CSV file with columns: <code>Store_id, Store_Type, Location_Type, Region_Code, Date, Holiday, Discount</code></p>
+
+      <div class="batch-upload">
+        <input type="file" id="csvFile" accept=".csv" class="file-input">
+        <label for="csvFile" class="file-label">
+          <span id="fileLabel">📂 Choose CSV file</span>
+        </label>
+        <button class="btn btn-secondary" id="batchBtn" disabled>
+          Run Batch Prediction
+        </button>
+      </div>
+
+      <div id="batchResult" class="batch-result hidden">
+        <div class="batch-summary" id="batchSummary"></div>
+        <div class="table-wrap">
+          <table class="result-table" id="batchTable">
+            <thead>
+              <tr>
+                <th>Store ID</th><th>Date</th><th>Store Type</th>
+                <th>Discount</th><th>Holiday</th><th>Predicted Sales (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="batchTableBody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-secondary" id="downloadBtn">⬇ Download Results CSV</button>
+      </div>
+    </section>
+
+    <!-- ── API reference ────────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">API Reference</h2>
+      <div class="api-table-wrap">
+        <table class="api-table">
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method get">GET</span></td><td><code>/health</code></td><td>Service health check</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/model/info</code></td><td>Model metadata & validation metrics</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/predict</code></td><td>Single-record prediction (JSON body)</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/predict/batch</code></td><td>Batch prediction (JSON array or CSV upload, max 5,000 rows)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="curl-examples">
+        <div class="curl-block">
+          <div class="code-label">Health check</div>
+          <pre class="code-pre curl-pre">curl http://localhost:5000/health</pre>
+        </div>
+        <div class="curl-block">
+          <div class="code-label">Single prediction</div>
+          <pre class="code-pre curl-pre">curl -X POST http://localhost:5000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "Store_id": 1,
+    "Store_Type": "S4",
+    "Location_Type": "L1",
+    "Region_Code": "R1",
+    "Date": "2019-06-15",
+    "Holiday": 0,
+    "Discount": "Yes"
+  }'</pre>
+        </div>
+        <div class="curl-block">
+          <div class="code-label">Batch prediction (CSV file)</div>
+          <pre class="code-pre curl-pre">curl -X POST http://localhost:5000/predict/batch \
+  -F "file=@TEST_FINAL.csv"</pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>Sales Forecasting API · LightGBM · Trained Jan 2018–May 2019 · Validation MAPE {{ metrics.MAPE }}%</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
